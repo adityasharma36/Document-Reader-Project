@@ -7,3 +7,36 @@ logs
 dist
 
 
+
+/src/generated/prisma
+
+# Local environment and secrets
+.env.*
+!.env.example
+
+# Build and generated output
+*.js.map
+*.d.ts.map
+*.tsbuildinfo
+/prisma.config.js
+/prisma.config.d.ts
+/src/db/prisma/generated/
+/backend/prisma.config.js
+/backend/prisma.config.d.ts
+/backend/src/db/prisma/generated/
+
+# Test and coverage output
+coverage/
+.nyc_output/
+
+# Local editor and operating-system files
+.DS_Store
+.vscode/
+.idea/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+/src/generated/prisma

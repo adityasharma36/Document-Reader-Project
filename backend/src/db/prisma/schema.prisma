@@ -1,0 +1,194 @@
+
+
+
+
+
+generator client {
+  provider = "prisma-client"
+    output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DocumentStatus {
+  UPLOADING
+  PARSING
+  OCR_PROCESSING
+  INDEXING
+  READY
+  FAILED
+  EMPTY_SCANNED_ERROR
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum ChangeType {
+  ADDED
+  REMOVED
+  MODIFIED
+}
+
+enum ChangeSignificance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Document {
+  id        String  @id @default(uuid()) @db.Uuid
+  userId    String  @db.Uuid
+  filename  String  @db.VarChar(255)
+  fileKey   String  @unique @db.VarChar(512)
+  mimeType  String  @db.VarChar(100)
+  sizeBytes Int
+  pageCount Int     @default(0)
+
+  status        DocumentStatus @default(UPLOADING)
+  statusMessage String?
+
+  rawText        String? @db.Text
+  normalizedText String? @db.Text
+  hasOcr         Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pages    DocumentPage[]
+  chunks   DocumentChunk[]
+  chatSessions ChatSessionDocument[]
+  citations Citation[]
+
+  sourceComparisons DocumentComparison[] @relation("SourceDocument")
+  targetComparisons DocumentComparison[] @relation("TargetDocument")
+
+  @@index([userId])
+}
+
+model DocumentPage {
+  id          String @id @default(uuid()) @db.Uuid
+  documentId  String @db.Uuid
+  pageNumber  Int
+  text        String @db.Text
+  startOffset Int
+  endOffset   Int
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, pageNumber])
+  @@index([documentId, startOffset, endOffset])
+}
+
+model DocumentChunk {
+  id                String @id @default(uuid()) @db.Uuid
+  documentId        String @db.Uuid
+  chunkIndex        Int
+  content           String @db.Text
+  normalizedContent String @db.Text
+  startPage         Int
+  endPage           Int
+  startOffset       Int
+  endOffset         Int
+  clauseType        String?
+
+  embedding Unsupported("vector(768)")?
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+}
+
+model ChatSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String   @default("New Session")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents ChatSessionDocument[]
+  messages  Message[]
+}
+
+model ChatSessionDocument {
+  sessionId  String @db.Uuid
+  documentId String @db.Uuid
+
+  session  ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  document Document    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, documentId])
+  @@index([documentId])
+}
+
+model Message {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @db.Uuid
+  role      MessageRole
+  content   String   @db.Text
+
+
+  agentSteps Json?
+
+  createdAt DateTime @default(now())
+
+  session  ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  citations Citation[]
+
+  @@index([sessionId, createdAt])
+}
+
+model Citation {
+  id          String  @id @default(uuid()) @db.Uuid
+  messageId   String  @db.Uuid
+  documentId  String  @db.Uuid
+  quote       String  @db.Text
+  verified    Boolean @default(false)
+  pageStart   Int
+  pageEnd     Int
+  startOffset Int
+  endOffset   Int
+  createdAt   DateTime @default(now())
+
+  message  Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([documentId])
+}
+
+model DocumentComparison {
+  id               String   @id @default(uuid()) @db.Uuid
+  sourceDocumentId String   @db.Uuid
+  targetDocumentId String   @db.Uuid
+  summary          String   @db.Text
+  createdAt        DateTime @default(now())
+
+  sourceDocument Document @relation("SourceDocument", fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  targetDocument Document @relation("TargetDocument", fields: [targetDocumentId], references: [id], onDelete: Cascade)
+
+  differences ComparisonChange[]
+
+  @@unique([sourceDocumentId, targetDocumentId])
+  @@index([sourceDocumentId])
+  @@index([targetDocumentId])
+}
+
+model ComparisonChange {
+  id            String @id @default(uuid()) @db.Uuid
+  comparisonId  String @db.Uuid
+  section       String?
+  oldText       String? @db.Text
+  newText       String? @db.Text
+  changeType    ChangeType
+  significance  ChangeSignificance
+  summary       String @db.Text
+
+  comparison DocumentComparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+
+  @@index([comparisonId])
+}
