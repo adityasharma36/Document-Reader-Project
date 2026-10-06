@@ -9,12 +9,17 @@ import { logger } from './configs/logger.config.js';
 import { apiRateLimiter } from './middlewares/rate-limit.middleware.js';
 
 const app = express();
+const allowedOrigins = serverConfig.FRONTEND_URL
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use((req, res, next) => {
-  res.setHeader(
-    'Access-Control-Allow-Origin',
-    serverConfig.FRONTEND_URL
-  );
+  const requestOrigin = req.headers.origin;
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Vary', 'Origin');
+  }
   res.setHeader(
     'Access-Control-Allow-Credentials',
     'true'

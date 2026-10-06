@@ -40,5 +40,7 @@ export const serverConfig: serverConfigType = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   JWT_SECRET: process.env.JWT_SECRET || 'development-secret',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+  FRONTEND_URL:
+    process.env.FRONTEND_URL ||
+    'http://localhost:3005,https://document-reader-frontend.vercel.app',
 }

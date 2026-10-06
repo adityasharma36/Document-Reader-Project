@@ -1,6 +1,6 @@
 const API_URL =
   import.meta.env.VITE_API_URL ??
-  "http://localhost:9004/api/v1";
+  "https://document-reader-project-1.onrender.com/api/v1";
 
 type ApiEnvelope<T> = {
   data?: T;
